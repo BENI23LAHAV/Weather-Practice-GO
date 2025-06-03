@@ -16,7 +16,7 @@ func main() {
 	temperature := make(chan SensorReading, 1)
 	humidity := make(chan SensorReading, 1)
 	wind := make(chan SensorReading, 1)
-
+    lowTemprature := make(chan float32, 1)
 	for i := range 10 {
 		
 		wg.Add(3)
@@ -24,9 +24,12 @@ func main() {
 			defer wg.Done()
 			measur := *TemperatureMeasure()
 			temperature <- measur
+			if measur.val<=0.0 {
+				lowTemprature <- measur.val
+			}
 
 		}(i)
-
+		
 		go func(i int) {
 			defer wg.Done()
 			measur := *HumidityMesure()
@@ -42,6 +45,13 @@ func main() {
 		}(i)
 
 		wg.Wait()
+	select{
+		case temp := <-lowTemprature:
+fmt.Printf("\n Temperature is Low!!!: %.3vC\n \n", temp)	
+case <-time.After(time.Second * 5):
+	fmt.Println("The temperature is normal during the last 5 seconds")
+		default:
+}
 		temperatureMeasures[i] = <-temperature
 		humidityMeasures[i] = <-humidity
 		windMeasures[i] = <-wind
